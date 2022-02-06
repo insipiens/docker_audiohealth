@@ -1,0 +1,179 @@
+########################################
+Bee colony vitality using audio analysis
+########################################
+
+
+************
+Introduction
+************
+The people around `Open Source Beehives (OSBH) <https://opensourcebeehives.com/>`_ were directing towards audio from the very beginning and therefore presenting coefficients which where won via `machine learning <https://github.com/opensourcebeehives/MachineLearning-Local>`_, learned via the `audio-samples <https://www.dropbox.com/sh/us1633xi4cmtecl/AAA6hplscuDR7aS_f73oRNyha?dl=0>`_ they had so far.
+
+The output is simply the activity/health status of a bee colony. So far the algorithm can tell whether the colony is dormant, active, pre-, post- or swarming, if the queen is missing or hatching. For more background information about the audio processing, please follow up reading
+`current work status thread in the OSBH Forum <https://community.akerkits.com/t/main-thread-current-work-status/326>`_.
+So far, the results are promising.
+
+
+*******
+Details
+*******
+We forked the "`OSBH machine learning <https://github.com/opensourcebeehives/MachineLearning-Local>`_" repository to `osbh-audioanalyzer <https://github.com/hiveeyes/osbh-audioanalyzer>`_ to make it able to obtain an input file option.
+
+For more information, see also `Rate vitality of bee colony via analysing its sound <https://community.hiveeyes.org/t/rate-vitality-of-bee-colony-via-analysing-its-sound/357/6>`_.
+
+
+*****
+Usage
+*****
+
+Synopsis
+========
+::
+
+    audiohealth analyze --audiofile ~/audio/samples/colony_before_swarming_25_to_15.ogg --analyzer tools/osbh-audioanalyzer/bin/test
+
+Output::
+
+    ==================
+    Sequence of states
+    ==================
+    pre-swarm, pre-swarm, pre-swarm, pre-swarm, pre-swarm, pre-swarm, pre-swarm, pre-swarm, pre-swarm, active, active, active, active, active, active, active, active, active, active, pre-swarm, pre-swarm, pre-swarm, pre-swarm, pre-swarm, pre-swarm, pre-swarm, pre-swarm, pre-swarm, pre-swarm, pre-swarm, pre-swarm, pre-swarm, active, active, active, active, active, active, active, pre-swarm, active, pre-swarm, pre-swarm, pre-swarm, pre-swarm, active, active, active, active, pre-swarm, pre-swarm, active, active, pre-swarm, active, pre-swarm, active, active, active, pre-swarm,
+
+    ===================
+    Compressed timeline
+    ===================
+      0s -  80s   pre-swarm       ========
+     90s - 180s   active          =========
+    190s - 310s   pre-swarm       ============
+    320s - 380s   active          ======
+    390s - 400s   pre-swarm       =
+    400s - 410s   active          =
+    410s - 440s   pre-swarm       ===
+    450s - 480s   active          ===
+    490s - 500s   pre-swarm       =
+    510s - 520s   active          =
+    530s - 540s   pre-swarm       =
+    540s - 550s   active          =
+    550s - 560s   pre-swarm       =
+    560s - 580s   active          ==
+    590s - 600s   pre-swarm       =
+
+    ==============
+    Total duration
+    ==============
+           320s   pre-swarm       ================================
+           280s   active          ============================
+
+    ======
+    Result
+    ======
+    The most common events (i.e. the events with the highest total duration) are:
+
+         The colony is mostly in »PRE-SWARM« state, which is going on for 320 seconds.
+         Sometimes, the state oscillates to »ACTIVE«, for 280 seconds in total.
+
+
+Help
+====
+::
+
+    $ audiohealth --help
+
+    Usage:
+      audiohealth analyze --audiofile audiofile --analyzer /path/to/osbh-audioanalyzer [--strategy lr-2.1] [--debug] [--keep]
+      audiohealth analyze --wavfile wavfile --analyzer /path/to/osbh-audioanalyzer [--strategy lr-2.1] [--debug]
+      audiohealth analyze --datfile datfile --analyzer /path/to/osbh-audioanalyzer [--strategy lr-2.1] [--debug]
+      audiohealth convert --audiofile audiofile --wavfile wavfile
+      audiohealth spectrogram --audiofile audiofile --pngfile pngfile
+      audiohealth power   --audiofile audiofile --pngfile pngfile
+      audiohealth power   --wavfile wavfile     --pngfile pngfile
+      audiohealth --version
+      audiohealth (-h | --help)
+
+    Options:
+      --wavfile=<wavfile>       Name of .wav file
+      --pngfile=<pngfile>       Output .png file of power spectrum
+      --audiofile=<audiofile>   Process audiofile. Please use sox-compatible input formats.
+      --datfile=<datfile>       Process datfile.
+      --analyzer=<analyzer>     Path to OSBH audioanalyzer binary
+      --strategy=<strategy>     The classification strategy. One of dt-0.9, dt-1.0, dt-2.0, lr-2.0, lr-2.1
+      --keep                    Keep (don't delete) downsampled and .dat file
+      --debug                   Enable debug messages
+      -h --help                 Show this screen
+
+Hint: By using ``--strategy dt-2.0`` or even ``--strategy dt-1.0``, different
+classification strategies can be toggled to be able to compare results against each other.
+``"dt-"`` means "decision tree", while ``"lr-"`` means "logistic regression".
+
+The cutting edge classification strategy is ``"lr-2.0"``, which is also the default setting.
+See also commit `Added new filters and logistic regression classifier <https://github.com/opensourcebeehives/MachineLearning-Local/commit/a40de504>`_. Aaron Makaruk describes it on 2017-07-01 like:
+
+    Our classifier has been recently updated to include two new states, and we've moved past decision-tree algorithms to something yielding greater results.
+
+
+
+*****
+Setup
+*****
+
+Repository
+==========
+::
+
+    git clone --recursive https://github.com/hiveeyes/audiohealth
+    cd audiohealth
+
+
+Prerequisites
+=============
+To relieve your machine from compiling SciPy or NumPy, install the python libraries from your distribution. `audiohealth` furthermore relies on `sox <http://sox.sourceforge.net/Docs/Documentation>`_ for audio resampling.
+We also recommend `youtube-dl <http://youtube-dl.org/>`_ for downloading audio samples from Youtube.
+
+Install some distribution software packages (if you are not root, you might want to prefix the command with ``sudo``)::
+
+    apt install python-virtualenv python-scipy python-numpy sox libsox-fmt-all xvfb xauth youtube-dl
+
+Build the `osbh-audioanalyzer <https://github.com/hiveeyes/osbh-audioanalyzer>`_::
+
+    make setup-osbh-audio-analyzer
+
+
+Main program
+============
+
+::
+
+    make setup-virtualenv
+    source .venv/bin/activate
+
+
+********
+Examples
+********
+
+::
+
+    # Acquire example files.
+    wget https://community.hiveeyes.org/uploads/default/original/1X/6de56aed3b520166d92ce3194ff6a9e6852491b2.mp3 -O colony-with-queen-gruber.mp3
+    wget https://community.hiveeyes.org/uploads/default/original/1X/c751a4a83e8c1f5f0380eee2c7ee310b0967056a.mp3 -O colony-without-queen-gruber.mp3
+
+    # Convert to .wav files.
+    sox colony-with-queen-gruber.mp3 colony-with-queen-gruber.wav
+    sox colony-without-queen-gruber.mp3 colony-without-queen-gruber.wav
+
+    # Run OSBH audio analyzer
+    audiohealth analyze --audiofile=colony-with-queen-gruber.mp3 --analyzer=tools/osbh-audioanalyzer/bin/test
+    audiohealth analyze --audiofile=colony-without-queen-gruber.mp3 --analyzer=tools/osbh-audioanalyzer/bin/test
+
+    # Compute power spectrum and find peaks
+    audiohealth power --audiofile=colony-with-queen-gruber.wav --pngfile=power.png
+    open power.png
+
+    # Compute spectrogram
+    audiohealth spectrogram --audiofile=colony-with-queen-gruber.wav --pngfile=spectrogram.png
+    open spectrogram.png
+
+
+*******
+Credits
+*******
+The driving force behind the audio signal processing at OSBH is `Javier Andrés Calvo <https://github.com/Jabors>`_, so we want to send a big thank you to him and the whole OSBH team - this program is really standing on the shoulders of giants. Keep up the good work!
