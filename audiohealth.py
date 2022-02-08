@@ -2,6 +2,7 @@
 # (c) 2017 Richard Pobering <richard@hiveeyes.org>
 # (c) 2017-2021 Andreas Motl <andreas@hiveeyes.org>
 import os
+import time
 import sys
 import shlex
 import shutil
@@ -19,10 +20,14 @@ try:
     import matplotlib.colors as colors
 except:
     sys.stderr.write('WARNING: matplotlib not available. Will not be able to generate images.\n')
-
+import paho.mqtt.client as mqtt
 
 VERSION  = '0.5.0'
 APP_NAME = 'audiohealth ' + VERSION
+
+def on_publish(client,userdata,result):             #create function for callback
+    print("data published \n")
+    pass
 
 def resample(audiofile):
     tmpfile = NamedTemporaryFile(suffix='.wav', delete=False)
@@ -103,7 +108,22 @@ def analyze(datfile, analyzer=None, strategy=None):
     return states
 
 def report(states):
-
+    mqtt_user=os.environ['USERS']
+    mqtt_port=int(os.environ["PORT"])
+    mqtt_pass=os.environ["PASSW"]
+    mqtt_broker=os.environ["ADDRESS"]
+    mqtt_topic=os.environ["TOPIC"]
+    
+    client = mqtt.Client("P1") #create new instance
+    client.on_publish = on_publish 
+    client.username_pw_set(username=mqtt_user,password=mqtt_pass)
+    try:
+        client.connect(mqtt_broker,mqtt_port) #connect to broker
+        time.sleep(10)
+    except:
+        print('connection failed')
+        skip_publish = True
+    
     # The audio is chunked into segments of 10 seconds each, see:
     #   - tools/osbh-audioanalyzer/params.h: float windowLength=2; //Window Length in s
     #   - tools/osbh-audioanalyzer/main.cpp: DetectedStates.size()==5
@@ -179,6 +199,9 @@ def report(states):
     try:
         winner_state, winner_duration = aggregated_sorted[0]
         print('     The colony is mostly in »{state}« state, which is going on for {duration} seconds.'.format(state=emphasize(winner_state.upper()), duration=emphasize(winner_duration)))
+        if skip_publish == False:
+            mqtt_payload = '{"analysis":"'+winner_state+'"}'
+            client.publish(mqtt_topic, payload=mqtt_payload, qos=0, retain=True)
     except:
         pass
 
@@ -387,6 +410,8 @@ def power_spectrum(wavfile):
 
 
 def power_spectrum_report(peak_data):
+
+
 
     # Filter <= 1500 Hz and RMS >= 100
     peak_data = {freq: power for freq, power in peak_data.items() if freq <= 1500 and power >= 100}
