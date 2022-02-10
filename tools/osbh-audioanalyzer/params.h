@@ -2,5 +2,5 @@
 float windowLength=2;
 
 //Sampling Rate in Hz
-float samplingRate=6300;
+float samplingRate=8000;
 

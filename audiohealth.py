@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # (c) 2017 Richard Pobering <richard@hiveeyes.org>
 # (c) 2017-2021 Andreas Motl <andreas@hiveeyes.org>
+#from asyncio.windows_events import NULL
 import os
 import time
 import sys
@@ -25,9 +26,6 @@ import paho.mqtt.client as mqtt
 VERSION  = '0.5.0'
 APP_NAME = 'audiohealth ' + VERSION
 
-def on_publish(client,userdata,result):             #create function for callback
-    print("data published \n")
-    pass
 
 def resample(audiofile):
     tmpfile = NamedTemporaryFile(suffix='.wav', delete=False)
@@ -54,7 +52,8 @@ def resample(audiofile):
         sys.exit(2)
 
     # Normalize, apply bandpass filter and resample
-    command = 'sox "{input}" "{output}" {remix_option} norm -3 sinc 30-3150 rate 6300'.format(input=audiofile, output=tmpfile.name, remix_option=remix_option)
+    #command = 'sox "{input}" "{output}" {remix_option} norm -3 sinc 30-3150 rate 6300'.format(input=audiofile, output=tmpfile.name, remix_option=remix_option)
+    command = 'sox "{input}" "{output}" {remix_option}'.format(input=audiofile, output=tmpfile.name, remix_option=remix_option)
     cmd = shlex.split(command)
     try:
         status = subprocess.check_call(cmd)
@@ -108,21 +107,22 @@ def analyze(datfile, analyzer=None, strategy=None):
     return states
 
 def report(states):
-    mqtt_user=os.environ['USERS']
-    mqtt_port=int(os.environ["PORT"])
-    mqtt_pass=os.environ["PASSW"]
-    mqtt_broker=os.environ["ADDRESS"]
-    mqtt_topic=os.environ["TOPIC"]
-    
+
+    mqtt_user=os.environ.get('USERS')
+    mqtt_port=int(os.environ.get('PORT',1883))
+    mqtt_pass=os.environ.get('PASSW')
+    mqtt_broker=os.environ.get('ADDRESS')
+    mqtt_topic=os.environ.get('TOPIC')
     client = mqtt.Client("P1") #create new instance
-    client.on_publish = on_publish 
     client.username_pw_set(username=mqtt_user,password=mqtt_pass)
     try:
         client.connect(mqtt_broker,mqtt_port) #connect to broker
-        time.sleep(10)
+        print('trying to connect to mqtt broker')
+        time.sleep(20)
     except:
         print('connection failed')
-        skip_publish = True
+        #skip_publish = True
+
     
     # The audio is chunked into segments of 10 seconds each, see:
     #   - tools/osbh-audioanalyzer/params.h: float windowLength=2; //Window Length in s
@@ -199,9 +199,13 @@ def report(states):
     try:
         winner_state, winner_duration = aggregated_sorted[0]
         print('     The colony is mostly in »{state}« state, which is going on for {duration} seconds.'.format(state=emphasize(winner_state.upper()), duration=emphasize(winner_duration)))
-        if skip_publish == False:
-            mqtt_payload = '{"analysis":"'+winner_state+'"}'
-            client.publish(mqtt_topic, payload=mqtt_payload, qos=0, retain=True)
+        mqtt_payload = '{"analysis":"'+winner_state+'"}'
+    except:
+        pass
+        
+    try:
+        client.publish(mqtt_topic, payload=mqtt_payload, qos=0, retain=True)
+        print('mqtt state:' + mqtt_payload + ' published')
     except:
         pass
 
