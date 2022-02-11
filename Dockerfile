@@ -31,4 +31,4 @@ USER appuser
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
 #CMD ["python", "audiohealth.py"]
-CMD tail -f /dev/null`
+CMD tail -f /dev/null
