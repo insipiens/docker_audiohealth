@@ -53,7 +53,7 @@ def resample(audiofile):
 
     # Normalize, apply bandpass filter and resample
     #command = 'sox "{input}" "{output}" {remix_option} norm -3 sinc 30-3150 rate 6300'.format(input=audiofile, output=tmpfile.name, remix_option=remix_option)
-    command = 'sox "{input}" "{output}" {remix_option}'.format(input=audiofile, output=tmpfile.name, remix_option=remix_option)
+    command = 'sox "{input}" "{output}" {remix_option} rate 6300'.format(input=audiofile, output=tmpfile.name, remix_option=remix_option)
     cmd = shlex.split(command)
     try:
         status = subprocess.check_call(cmd)
